@@ -21,7 +21,7 @@ public:
     FileSaver(string, bool);
     virtual void writeFrameNumber(unsigned long);
     virtual void write(double);
-    virtual void write(rs2::depth_frame);
+    virtual void write(rs2::video_frame);
 };
 
 #endif /* fileSaver_hpp */

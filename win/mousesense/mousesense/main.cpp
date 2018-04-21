@@ -33,13 +33,13 @@ string load_json(string fname) {
 
 void saving_thread() {
     FileSaver depth("depth.bin", true);
-    FileSaver timeStamp("timestamp.txt", false);
+    FileSaver timeStamp("depth_ts.txt", false);
     FileSaver frameNumber("framenumber.txt", false);
     
     while(saving) {
         rs2::frame fr;
         if (queue.poll_for_frame(&fr)) {
-            depth.write(fr.as<rs2::depth_frame>());
+            depth.write(fr.as<rs2::video_frame>());
             timeStamp.write(fr.get_timestamp());
             frameNumber.writeFrameNumber(fr.get_frame_number());
         }

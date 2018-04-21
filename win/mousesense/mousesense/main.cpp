@@ -18,7 +18,7 @@
 #include "fileSaver.hpp"
 
 atomic<bool> saving(true);
-rs2::frame_queue queue(90);
+rs2::frame_queue queue(30);
 
 void handle_interrupt(int sig) {
     printf("Program shutting down...\n");
@@ -39,7 +39,7 @@ void saving_thread() {
     while(saving) {
         rs2::frame fr;
         if (queue.poll_for_frame(&fr)) {
-            depth.write(fr.as<rs2::video_frame>());
+            depth.write(fr.as<rs2::depth_frame>());
             timeStamp.write(fr.get_timestamp());
             frameNumber.writeFrameNumber(fr.get_frame_number());
         }

@@ -30,7 +30,7 @@ void FileSaver::write(double timeStamp) {
     file << "\n";
 }
 
-void FileSaver::write(rs2::video_frame depth) {
+void FileSaver::write(rs2::depth_frame depth) {
     // write these binary data to file
     file.write((char *)depth.get_data(), depth.get_height() * depth.get_stride_in_bytes());
 }

@@ -252,7 +252,7 @@
 					/Users/wgillis/dev/lab/librealsense/src,
 					/Users/wgillis/dev/lab/librealsense/include,
 				);
-				OTHER_LDFLAGS = /Users/wgillis/dev/lab/librealsense/build/Debug/librealsense2.2.10.3.dylib;
+				OTHER_LDFLAGS = /Users/wgillis/dev/lab/librealsense/build/Debug/librealsense2.dylib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYMROOT = /Users/wgillis/dev/lab/datta_realsense/win;
 			};
@@ -269,7 +269,7 @@
 					/Users/wgillis/dev/lab/librealsense/src,
 					/Users/wgillis/dev/lab/librealsense/include,
 				);
-				OTHER_LDFLAGS = /Users/wgillis/dev/lab/librealsense/build/Debug/librealsense2.2.10.3.dylib;
+				OTHER_LDFLAGS = /Users/wgillis/dev/lab/librealsense/build/Debug/librealsense2.dylib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYMROOT = /Users/wgillis/dev/lab/datta_realsense/win;
 			};

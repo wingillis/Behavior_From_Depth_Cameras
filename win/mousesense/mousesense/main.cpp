@@ -22,7 +22,7 @@ rs2::frame_queue queue(30);
 
 void handle_interrupt(int sig) {
     printf("Program shutting down...\n");
-    saving = false;
+    saving.store(false, memory_order_release);
 }
 
 string load_json(string fname) {
@@ -36,7 +36,7 @@ void saving_thread() {
     FileSaver timeStamp("depth_ts.txt", false);
     FileSaver frameNumber("framenumber.txt", false);
     
-    while(saving) {
+    while(saving.load(memory_order_acquire)) {
         rs2::frame fr;
         if (queue.poll_for_frame(&fr)) {
             depth.write(fr.as<rs2::video_frame>());
@@ -48,17 +48,24 @@ void saving_thread() {
 }
 
 int main(int argc, const char * argv[]) {
-    const int width = 1280;
-    const int height = 720;
-    const int fps = 30;
+    int width, height, fps;
+    if (strcmp(argv[2], "fast") == 0) {
+        width = 640;
+        height = 480;
+        fps = 90;
+    } else if (strcmp(argv[2], "hd") == 0) {
+        width = 1280;
+        height = 720;
+        fps = 30;
+    } else {
+        // let's just make the default "fast" as well
+        width = 640;
+        height = 480;
+        fps = 90;
+    }
+
+    string params = load_json(argv[1]);
     
-//    rs2::context ctx;
-//    rs2::device_list devices = ctx.query_devices();
-//    rs2::device dev = devices.front();
-//    rs400::advanced_mode adv = dev.as<rs400::advanced_mode>();
-//    string params = load_json("d415paramset_1.json");
-//    adv.load_json(params);
-//    printf("%s", adv.serialize_json().c_str());
     
     // setup capturing the interrupt
     signal(SIGINT, &handle_interrupt);
@@ -76,16 +83,22 @@ int main(int argc, const char * argv[]) {
     config.enable_stream(RS2_STREAM_DEPTH, 0, width, height, RS2_FORMAT_Z16, fps);
     
     rs2::pipeline_profile profile = pipe.start(config);
-        
+    pipe.stop();
+    rs400::advanced_mode dev = profile.get_device();
+    dev.load_json(params);
+//    printf("%s\n", dev.serialize_json().c_str());
+    pipe.start(config);
 
     printf("Initialized\n");
-    while(saving) {
+    while(saving.load(memory_order_acquire)) {
         // capture stream and save it
         rs2::frameset frameset = pipe.wait_for_frames();
         rs2::depth_frame frame = frameset.get_depth_frame();
 
         queue.enqueue(frame);
     }
+    
+    pipe.stop();
     
     return EXIT_SUCCESS;
 }

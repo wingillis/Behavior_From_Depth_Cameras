@@ -15,10 +15,11 @@
 #include <streambuf>
 #include <fstream>
 #include <string>
+#include <stdio.h>
 #include "fileSaver.hpp"
 
 atomic<bool> saving(true);
-rs2::frame_queue queue(30);
+rs2::frame_queue queue(180);
 
 void handle_interrupt(int sig) {
     printf("Program shutting down...\n");
@@ -32,16 +33,32 @@ string load_json(string fname) {
 }
 
 void saving_thread() {
-    FileSaver depth("depth.bin", true);
-    FileSaver timeStamp("depth_ts.txt", false);
-    FileSaver frameNumber("framenumber.txt", false);
+    int filenum = 0;
+    long save_every = 2700; // frames
+    char depthname[20], tsname[20], framename[20];
+    sprintf(depthname, "depth-%03d.bin", filenum);
+    sprintf(tsname, "depth_ts-%03d.txt", filenum);
+    sprintf(framename, "framenumber-%03d.txt", filenum);
+    FileSaver depth((string)depthname, true);
+    FileSaver timeStamp((string)tsname, false);
+    FileSaver frameNumber((string)framename, false);
     
     while(saving.load(memory_order_acquire)) {
         rs2::frame fr;
         if (queue.poll_for_frame(&fr)) {
+            long current_frame = fr.get_frame_number();
             depth.write(fr.as<rs2::video_frame>());
             timeStamp.write(fr.get_timestamp());
-            frameNumber.writeFrameNumber(fr.get_frame_number());
+            frameNumber.writeFrameNumber(current_frame);
+            if (current_frame % save_every == 0 && current_frame != 0) {
+                filenum++;
+                sprintf(depthname, "depth-%03d.bin", filenum);
+                sprintf(tsname, "depth_ts-%03d.txt", filenum);
+                sprintf(framename, "framenumber-%03d.txt", filenum);
+                depth = FileSaver((string)depthname, true);
+                timeStamp = FileSaver((string)tsname, false);
+                frameNumber = FileSaver((string)framename, false);
+            }
         }
     }
     
@@ -49,19 +66,20 @@ void saving_thread() {
 
 int main(int argc, const char * argv[]) {
     int width, height, fps;
-    if (strcmp(argv[2], "fast") == 0) {
+    if (argc == 3 && strcmp(argv[2], "fast") == 0) {
+        printf("You've selected the 'fast' option - 90 fps at 640x480 px\n");
         width = 640;
         height = 480;
         fps = 90;
-    } else if (strcmp(argv[2], "hd") == 0) {
+    } else if (argc == 3 && strcmp(argv[2], "hd") == 0) {
+        printf("You've selected the 'high-definition' option - 30 fps at 1280x720 px\n");
         width = 1280;
         height = 720;
         fps = 30;
     } else {
         // let's just make the default "fast" as well
-        width = 640;
-        height = 480;
-        fps = 90;
+        printf("You gave either the incorrect number of arguments or did not specify a recording type\n");
+        return EXIT_FAILURE;
     }
 
     string params = load_json(argv[1]);
@@ -83,11 +101,8 @@ int main(int argc, const char * argv[]) {
     config.enable_stream(RS2_STREAM_DEPTH, 0, width, height, RS2_FORMAT_Z16, fps);
     
     rs2::pipeline_profile profile = pipe.start(config);
-    pipe.stop();
     rs400::advanced_mode dev = profile.get_device();
     dev.load_json(params);
-//    printf("%s\n", dev.serialize_json().c_str());
-    pipe.start(config);
 
     printf("Initialized\n");
     while(saving.load(memory_order_acquire)) {

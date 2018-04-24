@@ -24,6 +24,7 @@ rs2::frame_queue queue(180);
 void handle_interrupt(int sig) {
     printf("Program shutting down...\n");
     saving.store(false, memory_order_release);
+    return;
 }
 
 string load_json(string fname) {
@@ -62,6 +63,9 @@ void saving_thread() {
         }
     }
     
+    printf("Out of the saving loop\n");
+    return;
+    
 }
 
 int main(int argc, const char * argv[]) {
@@ -89,8 +93,8 @@ int main(int argc, const char * argv[]) {
     signal(SIGINT, &handle_interrupt);
     //signal(SIGKILL, &handle_interrupt);
     
-    thread t(&saving_thread);
-    t.detach();
+    thread save_thread(&saving_thread);
+//    t.detach();
     
     // define the realsense pipe
     rs2::pipeline pipe;
@@ -113,7 +117,10 @@ int main(int argc, const char * argv[]) {
         queue.enqueue(frame);
     }
     
+    printf("Out of the acquisition loop\n");
+    
     pipe.stop();
+    save_thread.join();
     
     return EXIT_SUCCESS;
 }

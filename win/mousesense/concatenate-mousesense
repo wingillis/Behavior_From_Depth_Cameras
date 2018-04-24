@@ -1,0 +1,12 @@
+#!/bin/bash
+
+cat depth_ts-*.txt > depth_ts.txt
+cat framenumber-*.txt > framenumber.txt
+#cat depth-*.avi > depth.avi
+ffmpeg -f concat -safe 0 -i <(printf "file '$PWD/%s'\n" ./depth-*.avi) -c copy depth.avi
+
+mkdir components
+
+mv depth_ts-*.txt components/
+mv framenumber-*.txt components/
+mv depth-*.avi components/

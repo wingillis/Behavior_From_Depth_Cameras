@@ -7,6 +7,7 @@
 //
 
 #include <iostream>
+#include <iomanip>
 #include <signal.h>
 #include <atomic>
 #include <thread>
@@ -34,34 +35,51 @@ string load_json(string fname) {
 }
 
 void saving_thread() {
+    FILE *pPipe;
     int filenum = 0;
     long save_every = 2700; // frames
     char depthname[20], tsname[20], framename[20];
-    sprintf(depthname, "depth-%03d.bin", filenum);
+//    sprintf(depthname, "depth-%03d.bin", filenum);
+    sprintf(depthname, "depth-%03d.avi", filenum);
     sprintf(tsname, "depth_ts-%03d.txt", filenum);
     sprintf(framename, "framenumber-%03d.txt", filenum);
-    FileSaver depth((string)depthname, true);
+//    FileSaver depth((string)depthname, true);
     FileSaver timeStamp((string)tsname, false);
     FileSaver frameNumber((string)framename, false);
+    stringstream sstm;
+    sstm << "ffmpeg -y -loglevel fatal -threads 6 -framerate 30 -f rawvideo -s 1280x720 -pix_fmt gray16le -i - -an -vcodec ffv1 -slices 24 -slicecrc 1 -r 30 " << depthname;
+    
+    if ( !(pPipe = popen(sstm.str().c_str(), "w")) ) {
+        printf("popen error\n");
+        exit(1);
+    }
     
     while(saving.load(memory_order_acquire)) {
         rs2::frame fr;
         if (queue.poll_for_frame(&fr)) {
             long current_frame = fr.get_frame_number();
-            depth.write(fr.as<rs2::video_frame>());
+//            depth.write(fr.as<rs2::video_frame>());
+            rs2::video_frame vfr = fr.as<rs2::video_frame>();
+            fwrite(vfr.get_data(), 2, vfr.get_height() * vfr.get_width(), pPipe);
+            fflush(pPipe);
             timeStamp.write(fr.get_timestamp());
             frameNumber.writeFrameNumber(current_frame);
             if (current_frame % save_every == 0 && current_frame != 0) {
                 filenum++;
-                sprintf(depthname, "depth-%03d.bin", filenum);
+//                sprintf(depthname, "depth-%03d.bin", filenum);
+                sprintf(depthname, "depth-%03d.avi", filenum);
                 sprintf(tsname, "depth_ts-%03d.txt", filenum);
                 sprintf(framename, "framenumber-%03d.txt", filenum);
-                depth = FileSaver((string)depthname, true);
+//                depth = FileSaver((string)depthname, true);
+//                fclose(pPipe);
                 timeStamp = FileSaver((string)tsname, false);
                 frameNumber = FileSaver((string)framename, false);
             }
         }
     }
+    
+    fflush(pPipe);
+    fclose(pPipe);
     
     printf("Out of the saving loop\n");
     return;

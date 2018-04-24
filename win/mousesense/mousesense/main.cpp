@@ -34,20 +34,21 @@ string load_json(string fname) {
     return (string)contents;
 }
 
-void saving_thread() {
+void saving_thread(int width, int height, int fps) {
     FILE *pPipe;
     int filenum = 0;
-    long save_every = 2700; // frames
+    long save_every = fps * 120; // frames
     char depthname[20], tsname[20], framename[20];
 //    sprintf(depthname, "depth-%03d.bin", filenum);
     sprintf(depthname, "depth-%03d.avi", filenum);
     sprintf(tsname, "depth_ts-%03d.txt", filenum);
     sprintf(framename, "framenumber-%03d.txt", filenum);
+    printf("Saving every %ld frames\n", save_every);
 //    FileSaver depth((string)depthname, true);
     FileSaver timeStamp((string)tsname, false);
     FileSaver frameNumber((string)framename, false);
     stringstream sstm;
-    sstm << "ffmpeg -y -loglevel fatal -threads 6 -framerate 30 -f rawvideo -s 1280x720 -pix_fmt gray16le -i - -an -vcodec ffv1 -slices 24 -slicecrc 1 -r 30 " << depthname;
+    sstm << "ffmpeg -y -loglevel fatal -threads 4 -framerate " << fps << " -f rawvideo -s " << width << "x" << height << " -pix_fmt gray16le -i - -an -vcodec ffv1 -slices 24 -slicecrc 1 -r " << fps << " " << depthname;
     
     if ( !(pPipe = popen(sstm.str().c_str(), "w")) ) {
         printf("popen error\n");
@@ -71,7 +72,14 @@ void saving_thread() {
                 sprintf(tsname, "depth_ts-%03d.txt", filenum);
                 sprintf(framename, "framenumber-%03d.txt", filenum);
 //                depth = FileSaver((string)depthname, true);
-//                fclose(pPipe);
+//                fflush(pPipe);
+                pclose(pPipe);
+                sstm.str(string());
+                sstm << "ffmpeg -y -loglevel fatal -threads 4 -framerate " << fps << " -f rawvideo -s " << width << "x" << height << " -pix_fmt gray16le -i - -an -vcodec ffv1 -slices 24 -slicecrc 1 -r " << fps << " " << depthname;
+                if ( !(pPipe = popen(sstm.str().c_str(), "w")) ) {
+                    printf("popen error\n");
+//                    exit(1);
+                }
                 timeStamp = FileSaver((string)tsname, false);
                 frameNumber = FileSaver((string)framename, false);
             }
@@ -79,7 +87,7 @@ void saving_thread() {
     }
     
     fflush(pPipe);
-    fclose(pPipe);
+    pclose(pPipe);
     
     printf("Out of the saving loop\n");
     return;
@@ -111,7 +119,7 @@ int main(int argc, const char * argv[]) {
     signal(SIGINT, &handle_interrupt);
     //signal(SIGKILL, &handle_interrupt);
     
-    thread save_thread(&saving_thread);
+    thread save_thread(&saving_thread, width, height, fps);
 //    t.detach();
     
     // define the realsense pipe

@@ -130,6 +130,7 @@ int main(int argc, const char * argv[]) {
 
     config.enable_stream(RS2_STREAM_DEPTH, 0, width, height, RS2_FORMAT_Z16, fps);
     
+    // TODO: load advanced mode device the proper way, before starting a recording
     rs2::pipeline_profile profile = pipe.start(config);
     rs400::advanced_mode dev = profile.get_device();
     dev.load_json(params);

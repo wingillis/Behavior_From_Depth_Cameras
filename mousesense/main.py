@@ -11,6 +11,10 @@ def main():
   for i in devs:
     print(i)
   print(f'Connecting to first device...')
+  dev = devs[0]
+  adv_mode = rs.rs400_advanced_mode(dev)
+  # print(f'Advanced mode is {adv_mode.is_enabled()}')
+  print(adv_mode)
 
 def cli():
   fire.Fire(main)

@@ -6,3 +6,4 @@ Index/
 .DS_Store
 
 *.egg-info
+*.pyc
